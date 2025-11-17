@@ -1,33 +1,31 @@
-# ProjectZipper 🗂️⚡
+ProjectZipper 🗂️⚡
 
-A **FastAPI-based service** that converts plain text-based file tree structures into instantly downloadable ZIP archives. It is perfect for quickly generating project skeletons, boilerplate code, or template file structures.
+<div align="center">
 
-\<div align="center"\>
+https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi
+https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white
+https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white
 
-[](https://fastapi.tiangolo.com/)
-[](https://www.python.org/)
-[](https://en.wikipedia.org/wiki/Zip_\(file_format\))
+A high-performance FastAPI service that converts text-based file trees into downloadable ZIP archives
 
-\</div\>
+https://img.shields.io/github/issues/umarbutt/projectzipper
+https://img.shields.io/badge/License-MIT-yellow.svg
+https://img.shields.io/badge/python-3.8+-blue.svg
 
------
+</div>
 
-## ✨ Features
+✨ Features
 
-  * **🚀 Lightning Fast** - Built with FastAPI for high-performance ZIP generation.
-  * **📁 Smart Parsing** - Understands and correctly interprets various textual file tree formats.
-  * **🎯 Auto Content** - Generates appropriate placeholder content based on recognized file extensions (e.g., Python comments, JavaScript console logs).
-  * **💾 Streaming Response** - Uses efficient memory usage by streaming the ZIP file for large archives.
-  * **🔧 Fully Typed** - Leverages Python type hints throughout for better code quality and developer experience.
-  * **🐳 Docker Ready** - Easy and consistent deployment using containerization.
+· 🚀 Lightning Fast - Built with FastAPI for high-performance ZIP generation
+· 📁 Smart Parsing - Interprets various textual file tree formats with intelligent structure detection
+· 🎯 Auto Content Generation - Creates appropriate placeholder content based on file extensions
+· 💾 Streaming Response - Efficient memory usage with direct ZIP streaming for large archives
+· 🔧 Fully Typed - Comprehensive Python type hints for better code quality and developer experience
+· 🐳 Docker Ready - Containerized deployment for consistent environments
 
------
+🎮 Quick Start
 
-## 🎮 Quick Start
-
-### Installation
-
-Clone the repository and install the dependencies:
+Installation
 
 ```bash
 # Clone the repository
@@ -38,14 +36,12 @@ cd projectzipper
 pip install -r requirements.txt
 ```
 
-### Usage
-
-You can use the service by sending a `POST` request with the file structure text.
+Basic Usage
 
 ```python
 import requests
 
-# Example file structure input
+# Example file structure
 tree_structure = """
 project/
 ├── src/
@@ -65,29 +61,22 @@ response = requests.post(
     }
 )
 
-# Save the downloaded ZIP file
+# Save the generated ZIP
 if response.status_code == 200:
     with open("my_project.zip", "wb") as f:
         f.write(response.content)
-    print("Successfully generated my_project.zip")
+    print("✅ Successfully generated my_project.zip")
 else:
-    print(f"Error: {response.status_code}, {response.text}")
+    print(f"❌ Error: {response.status_code}, {response.text}")
 ```
 
------
+🛠️ API Reference
 
-## 🛠️ API Reference
+POST /generate-zip
 
-### `POST /generate-zip`
+Generates a ZIP archive from the provided file tree structure.
 
-Generates a ZIP file from the provided file tree structure.
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `tree_structure` | `string` | The text representation of the file directory tree. |
-| `root_dir_name` | `string` | The name of the top-level directory inside the generated ZIP file. |
-
-**Request Body Example:**
+Request Body:
 
 ```json
 {
@@ -96,147 +85,140 @@ Generates a ZIP file from the provided file tree structure.
 }
 ```
 
-**Response:** ZIP file stream (`application/zip`)
+Parameters:
 
------
+Field Type Required Description
+tree_structure string ✅ Text representation of directory tree
+root_dir_name string ✅ Top-level directory name in ZIP
 
-## 📦 Supported File Types
+Response: application/zip stream with generated archive
 
-| File Type | Generated Content |
-| :--- | :--- |
-| **`.py`** | Python placeholder with comments (`# Your code here...`) |
-| **`.js`** | JavaScript placeholder with a console log (`console.log('// File:');`) |
-| **`.json`** | Basic JSON structure (`{}`) |
-| **`.txt`** | Simple text placeholder (`This is a placeholder file.`) |
-| **Others** | Basic file identifier |
+📦 Supported File Types
 
------
+File Type Generated Content
+.py Python file with comments and basic structure
+.js JavaScript file with console log statement
+.json Empty JSON object {}
+.txt Simple text placeholder
+.md Markdown file with basic header
+.html Basic HTML5 template
+.css CSS file with reset styles
+Others Generic placeholder text
 
-## 🚀 Deployment
+🚀 Deployment
 
-### Local Development
-
-Run the FastAPI application directly:
+Local Development
 
 ```bash
 python main.py
+# Server runs on http://localhost:8000
 ```
 
-### Using Docker
-
-For containerized deployment:
+Docker Deployment
 
 ```bash
 docker build -t projectzipper .
 docker run -p 8000:8000 projectzipper
 ```
 
-### Production with Uvicorn
-
-Use Uvicorn with multiple worker processes for optimal performance:
+Production with Uvicorn
 
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
------
-
-## 🏗️ Project Structure
+🏗️ Project Structure
 
 ```
 projectzipper/
-├── main.py              # Core FastAPI application
-├── requirements.txt     # Python dependencies
-├── Dockerfile           # Docker container configuration
-└── examples/            # Usage examples
-    ├── basic_usage.py
-    └── advanced_usage.py
+├── main.py                 # FastAPI application entry point
+├── requirements.txt        # Python dependencies
+├── Dockerfile             # Container configuration
+├── README.md              # Project documentation
+└── examples/              # Usage examples
+    ├── basic_usage.py     # Simple implementation
+    └── advanced_usage.py  # Complex use cases
 ```
 
------
+🤝 Contributing
 
-## 🤝 Contributing
+We welcome contributions! Please follow these steps:
 
-We welcome your input\! We aim to make contributing to ProjectZipper as easy and transparent as possible.
+1. Fork the repository
+2. Create feature branch: git checkout -b feature/amazing-feature
+3. Commit changes: git commit -m 'feat: Add amazing feature'
+4. Push to branch: git push origin feature/amazing-feature
+5. Open a Pull Request
 
-### Development Setup
+Reporting Issues
 
-1.  Fork the repository.
-2.  Create your feature branch: `git checkout -b feature/amazing-feature`
-3.  Commit your changes: `git commit -m 'feat: Add amazing feature'`
-4.  Push to the branch: `git push origin feature/amazing-feature`
-5.  Open a **Pull Request**.
+Use the GitHub Issues to report bugs or request features.
 
-### Reporting Issues
+📄 License
 
-Please use the [GitHub issue tracker](https://www.google.com/search?q=https://github.com/umarbutt/projectzipper/issues) to report any bugs or suggest new features.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
------
+👨‍💻 Author
 
-## 📄 License
+Mohd Umar Butt
 
-This project is licensed under the **MIT License** - see the `LICENSE` file for details.
+<div align="center">
 
------
+https://img.shields.io/badge/GitHub-mohdumarbutt-181717?style=for-the-badge&logo=github
+https://img.shields.io/badge/LinkedIn-Mohd_Umar_Butt-0077B5?style=for-the-badge&logo=linkedin
+https://img.shields.io/badge/Email-Mohdumar2724@gmail.com-D14836?style=for-the-badge&logo=gmail
 
-## 👨‍💻 Author
+</div>
 
-**Mohd Umar Butt (Umar Butt)**
+🌟 Support
 
-| Link | Handle |
-|:---:|:---:|
-| 💻 [GitHub](https://github.com/mohdumarbutt) | 🔗 [LinkedIn](https://www.linkedin.com/in/mohdumarbutt) |
-| 🐦 [Twitter](https://www.google.com/search?q=https://twitter.com/umarbutt) | 💼 [Portfolio / Blog](https://umarbutt.com) |
+If this project helps you, consider supporting its development:
 
------
+<div align="center">
 
-## 🌟 Support
+https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black
 
-If you find this project helpful, please consider supporting its development:
+</div>
 
-[](https://buymeacoffee.com/umarbutt)
+Your support helps maintain and improve this project! ❤️
 
-Your support helps me continue maintaining and improving this project and creating more open-source tools for the community.
+🛡️ Security
 
------
+For security-related issues, please email Mohdumar2724@gmail.com instead of using the public issue tracker.
 
-## 📊 Project Metrics
+🙏 Acknowledgments
 
-\<div align="center"\>
+· FastAPI team for the excellent web framework
+· Pydantic for robust data validation
+· Uvicorn for high-performance ASGI server
+· All contributors and users of this project
 
-| GitHub Stats | Visitor Count |
-| :---: | :---: |
-| [](https://www.google.com/search?q=https://github.com/umarbutt) |  |
+---
 
-\</div\>
+<div align="center">
 
------
-
-## 🛡️ Security
-
-If you discover any security-related issues, please email **security@umarbutt.com** instead of using the public issue tracker.
-
------
-
-## 🙏 Acknowledgments
-
-  * The **FastAPI** team for the amazing web framework.
-  * **Pydantic** for robust data validation.
-  * **Uvicorn** for the high-performance ASGI server implementation.
-  * All contributors and users of this project\!
-
------
-
-\<div align="center"\>
-
-## ⭐ Don't forget to star this repo if you find it useful\! ⭐
+⭐ Don't forget to star this repo if you find it useful!
 
 Made with ❤️ by Umar Butt
 
-<br>
+https://img.shields.io/github/followers/mohdumarbutt?style=social
 
-| Follow Me | Project Badge |
-| :---: | :---: |
-| [](https://www.google.com/search?q=https://twitter.com/umarbutt) | [](https://www.google.com/search?q=https://github.com/umarbutt/projectzipper) |
+</div>
 
-\</div\>
+---
+
+📊 Project Status
+
+https://img.shields.io/github/last-commit/umarbutt/projectzipper
+https://img.shields.io/github/repo-size/umarbutt/projectzipper
+
+Last Updated: 25/10/2025
+
+---
+
+<div align="center">
+
+https://img.shields.io/badge/Powered_by-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white
+https://img.shields.io/badge/Made_with-Python-3776AB?style=for-the-badge&logo=python&logoColor=white
+
+</div>
