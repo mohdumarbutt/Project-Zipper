@@ -183,8 +183,6 @@ This project is licensed under the **MIT License** - see the `LICENSE` file for 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Mohd_Umar_Butt-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/mohdumarbutt)
 [![Email](https://img.shields.io/badge/Email-Mohdumar2724@gmail.com-D14836?style=for-the-badge&logo=gmail)](mailto:Mohdumar2724@gmail.com)
  [![Instagram](https://img.shields.io/badge/Instagram-theumar_butt-E4405F?style=for-the-badge&logo=instagram)](https://www.instagram.com/theumar_butt/)
- [![Mohd Umar Butt's GitHub Stats](https://profile-summary-for-github.com/user/mohdumarbutt)](https://github.com/mohdumarbutt)
-
  
 </div>
 
