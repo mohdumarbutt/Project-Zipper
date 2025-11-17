@@ -1,4 +1,4 @@
-```markdown
+
 # ProjectZipper 🗂️⚡
 
 <div align="center">
