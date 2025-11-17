@@ -10,7 +10,7 @@ from pydantic import BaseModel
 class TreeInput(BaseModel):
     """Defines the structure of the JSON input for the API."""
     tree_structure: str
-    root_dir_name: str = "project" # Default name for the downloadable ZIP and root folder
+    root_dir_name: str = "project" # Used only for ZIP filename
 
 app = FastAPI(
     title="ProjectZipper",
@@ -30,26 +30,21 @@ def read_root():
 
 def parse_and_zip_project(
     tree_lines: list[str], 
-    root_name: str, 
     zip_buffer: io.BytesIO
 ) -> Iterator[bytes]:
     """
     Parses tree lines, creates a zip archive in the in-memory buffer, 
-    and returns a generator to stream the data. This version uses robust 
-    parsing to strip structural characters (│, ├──, etc.).
+    and returns a generator to stream the data. This version creates
+    the exact structure without an extra root directory.
     """
     
-    # --- Step 3b & 3c (Setup Archive) ---
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_archive:
         
         # Stack to manage directory hierarchy
         current_path_stack = []
         
-        # Base path for zipping (e.g., 'valley-prayer-times/')
-        base_path = f"{root_name}" 
-        
-        # Add the root folder itself to the ZIP
-        zip_archive.writestr(f"{base_path}/", "")
+        # Track created directories to avoid duplicates
+        created_dirs = set()
 
         for line in tree_lines:
             line = line.rstrip() # Remove trailing whitespace
@@ -57,26 +52,23 @@ def parse_and_zip_project(
             if not line:
                 continue
             
-            # --- 3c (Robust Parsing: Find the Start of the Name) ---
+            # --- Robust Parsing: Find the Start of the Name ---
             
             # Find the position where the actual file/folder name starts 
-            # by looking for the first alphanumeric character or dot.
             name_start_index = 0
             for i, char in enumerate(line):
-                # Stop searching when we hit an alphanumeric character or a dot (start of filename)
+                # Stop searching when we hit an alphanumeric character or a dot
                 if char.isalnum() or char in ['.', '/']:
                     break
                 name_start_index = i + 1
             
-            # The clean name is the remainder of the line, stripped of any leading/trailing space.
+            # The clean name is the remainder of the line, stripped of any leading/trailing space
             clean_name = line[name_start_index:].strip()
             
             if not clean_name:
                 continue
 
             # --- Calculate Indent Level ---
-            # Calculate the indent level based on the number of structural symbols present 
-            # before the name. This helps manage the stack.
             indent_level = line[:name_start_index].count('│') + line[:name_start_index].count('└') + line[:name_start_index].count('├')
             
             # --- Determine Hierarchy ---
@@ -88,74 +80,179 @@ def parse_and_zip_project(
             # 2. Append the current clean name to the stack
             current_path_stack.append(clean_name)
             
-            # 3. Construct the full path
+            # 3. Construct the full path (no extra root directory)
             relative_path = "/".join(current_path_stack)
-            full_zip_path = f"{base_path}/{relative_path}"
 
-            # --- 3c (Improved Directory Detection) ---
+            # --- Improved Directory Detection ---
             
-            # Better heuristic for detecting directories:
-            # - If the name ends with '/', it's definitely a directory
-            # - If it contains no '.' in the last segment, it's likely a directory
-            # - Common directory names in the structure
+            # Detect directories based on common patterns and structure
             is_directory = (
-                clean_name.endswith('/') or 
-                '/' in clean_name or  # Already has path separator
-                not '.' in clean_name.split('/')[-1] or  # No extension in last part
+                clean_name.endswith('/') or
+                not '.' in clean_name.split('/')[-1] or
                 any(dir_indicator in clean_name.lower() for dir_indicator in 
-                    ['src', 'dist', 'examples', 'test', 'docs', 'fixtures', 'workflows', 'issue_template'])
+                    ['src', 'dist', 'examples', 'test', 'docs', 'fixtures', 'workflows', 
+                     'issue_template', '.github', 'valley-prayer-times', 'project-01'])
             )
             
             if is_directory:
-                # Directory logic:
-                dir_path = full_zip_path.rstrip('/') + "/"
-                zip_archive.writestr(dir_path, "")
+                # Directory logic
+                dir_path = relative_path.rstrip('/') + "/"
                 
-                # Keep the directory in the stack for child files
-                # Don't pop it immediately
+                # Only create directory if not already created
+                if dir_path not in created_dirs:
+                    zip_archive.writestr(dir_path, "")
+                    created_dirs.add(dir_path)
+                
+                # Don't pop from stack - keep for child items
                 
             else:
-                # File logic:
-                
-                # Generate simple placeholder content (slightly expanded)
-                if full_zip_path.endswith(('.js', '.jsx')):
-                    content = f'// File: {relative_path}\nconsole.log("Project Zipper generated this file.");'
-                elif full_zip_path.endswith('.d.ts'):
-                    content = f'// TypeScript definitions for {relative_path}\nexport interface PrayerTimes {{ /* ... */ }}'
-                elif full_zip_path.endswith('.py'):
-                    content = f'# File: {relative_path}\n# This content is a placeholder.'
-                elif full_zip_path.endswith('.dart'):
-                    content = f'// File: {relative_path}\n// Flutter/Dart placeholder'
-                elif full_zip_path.endswith('.md'):
-                    content = f'# {relative_path}\n\nDocumentation file generated by ProjectZipper.'
-                elif full_zip_path.endswith('.json'):
-                    content = '{\n  "generated_by": "ProjectZipper",\n  "file": "' + relative_path + '"\n}'
-                elif full_zip_path.endswith('.yml') or full_zip_path.endswith('.yaml'):
-                    content = '# YAML configuration\ngenerated_by: "ProjectZipper"\nfile: "' + relative_path + '"'
-                else:
-                    content = f'File: {relative_path} content.'
-                    
-                zip_archive.writestr(full_zip_path, content.encode('utf-8'))
+                # File logic - generate appropriate content
+                content = generate_file_content(relative_path, clean_name)
+                zip_archive.writestr(relative_path, content.encode('utf-8'))
                 
                 # Pop the file name from the stack immediately after creation
                 current_path_stack.pop()
 
-    # --- 3d (Finalize Buffer) ---
-    zip_buffer.seek(0) # Rewind the buffer to the beginning
+    # --- Finalize Buffer ---
+    zip_buffer.seek(0)
 
-    # --- 4 (Create Stream Generator) ---
+    # --- Create Stream Generator ---
     def zip_streamer() -> Iterator[bytes]:
         """Reads the in-memory buffer in chunks for streaming."""
-        chunk_size = 8192  # 8KB
+        chunk_size = 8192
         while True:
             chunk = zip_buffer.read(chunk_size)
             if not chunk:
                 break
             yield chunk
 
-    # Return the generator function
     return zip_streamer()
 
+def generate_file_content(relative_path: str, clean_name: str) -> str:
+    """Generate appropriate placeholder content based on file type."""
+    if relative_path.endswith(('.js', '.jsx')):
+        return f'''// {clean_name}
+// Generated by ProjectZipper
+
+function main() {{
+    console.log("Hello from {clean_name}");
+}}
+
+module.exports = {{ main }};
+'''
+    elif relative_path.endswith('.d.ts'):
+        return f'''// TypeScript definitions for {clean_name}
+// Generated by ProjectZipper
+
+export interface PrayerTimes {{
+    fajr: string;
+    sunrise: string;
+    dhuhr: string;
+    asr: string;
+    maghrib: string;
+    isha: string;
+}}
+
+export declare function calculatePrayerTimes(date: Date, latitude: number, longitude: number): PrayerTimes;
+'''
+    elif relative_path.endswith('.py'):
+        return f'''# {clean_name}
+# Generated by ProjectZipper
+
+def main():
+    print("Hello from {clean_name}")
+
+if __name__ == "__main__":
+    main()
+'''
+    elif relative_path.endswith('.dart'):
+        return f'''// {clean_name}
+// Generated by ProjectZipper
+
+void main() {{
+    print('Hello from {clean_name}');
+}}
+'''
+    elif relative_path.endswith('.md'):
+        return f'''# {clean_name}
+
+This file was generated by ProjectZipper.
+
+## Description
+
+Placeholder content for {clean_name}.
+'''
+    elif relative_path.endswith('.json'):
+        return f'''{{
+  "generated_by": "ProjectZipper",
+  "file": "{clean_name}",
+  "description": "Placeholder configuration file"
+}}
+'''
+    elif relative_path.endswith(('.yml', '.yaml')):
+        return f'''# {clean_name}
+# Generated by ProjectZipper
+
+name: "Project Configuration"
+version: "1.0.0"
+description: "Placeholder YAML configuration"
+'''
+    elif relative_path in ['LICENSE', 'LICENSE.md']:
+        return '''MIT License
+
+Copyright (c) 2024 Project Author
+
+Permission is hereby granted...
+'''
+    elif relative_path == 'package.json':
+        return '''{
+  "name": "valley-prayer-times",
+  "version": "1.0.0",
+  "description": "Prayer times calculation library",
+  "main": "dist/vpt.min.js",
+  "scripts": {
+    "build": "node build.js",
+    "test": "jest",
+    "lint": "eslint src/"
+  },
+  "keywords": ["prayer", "times", "islamic", "calculation"],
+  "author": "Your Name",
+  "license": "MIT"
+}
+'''
+    elif relative_path in ['.gitignore', '.npmignore']:
+        return '''node_modules/
+dist/
+*.log
+.DS_Store
+.env
+'''
+    elif relative_path in ['.eslintrc.json']:
+        return '''{
+  "extends": ["eslint:recommended"],
+  "env": {
+    "node": true,
+    "es6": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2020
+  }
+}
+'''
+    elif relative_path in ['.prettierrc']:
+        return '''{
+  "semi": true,
+  "singleQuote": true,
+  "tabWidth": 2
+}
+'''
+    else:
+        return f'''# {clean_name}
+
+This file was generated by ProjectZipper.
+
+File: {relative_path}
+'''
 
 # --- 4. FastAPI Endpoint (POST /generate-zip) ---
 
@@ -171,15 +268,15 @@ async def generate_zip_file(input_data: TreeInput):
     if not lines or not input_data.tree_structure.strip():
         raise HTTPException(status_code=400, detail="Input tree structure cannot be empty.")
 
-    # --- 3a (Initialize Buffer) ---
+    # Initialize Buffer
     zip_buffer = io.BytesIO()
     
     try:
-        stream = parse_and_zip_project(lines, input_data.root_dir_name, zip_buffer)
+        stream = parse_and_zip_project(lines, zip_buffer)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during zip creation: {str(e)}")
 
-    # --- 4 (Construct Streaming Response) ---
+    # Construct Streaming Response
     response = StreamingResponse(
         stream,
         media_type="application/zip",
