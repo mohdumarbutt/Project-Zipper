@@ -164,7 +164,8 @@ This project is licensed under the **MIT License** - see the `LICENSE` file for 
 [![GitHub](https://img.shields.io/badge/GitHub-mohdumarbutt-181717?style=for-the-badge&logo=github)](https://github.com/mohdumarbutt)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Mohd_Umar_Butt-0077B5?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/mohdumarbutt)
 [![Email](https://img.shields.io/badge/Email-Mohdumar2724@gmail.com-D14836?style=for-the-badge&logo=gmail)](mailto:Mohdumar2724@gmail.com)
-
+ [![Instagram](https://img.shields.io/badge/Instagram-theumar_butt-E4405F?style=for-the-badge&logo=instagram)](https://www.instagram.com/theumar_butt/)`
+ 
 </div>
 
 ## 🌟 Support
@@ -173,7 +174,7 @@ If this project helps you, consider supporting its development:
 
 <div align="center">
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/mohdumarbutt)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/umarbutt)
 
 </div>
 
