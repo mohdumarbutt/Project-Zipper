@@ -1,6 +1,6 @@
 import io
 import zipfile
-from typing import Iterator
+from typing import Iterator, Tuple
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -30,10 +30,10 @@ def read_root():
 def parse_and_zip_project(
     tree_lines: list[str], 
     zip_buffer: io.BytesIO
-) -> Iterator[bytes]:
+) -> Tuple[Iterator[bytes], str]:
     """
     Parses tree lines, creates a zip archive in the in-memory buffer, 
-    and returns a generator to stream the data.
+    and returns a generator to stream the data along with the project name.
     """
     
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_archive:
@@ -44,13 +44,19 @@ def parse_and_zip_project(
         # Track created directories to avoid duplicates
         created_dirs = set()
         
-        # Extract root directory name from first line
-        root_dir_name = extract_root_directory(tree_lines[0]) if tree_lines else "project"
+        # Extract project name from first line
+        project_name = extract_project_name(tree_lines[0]) if tree_lines else "project"
 
-        for line in tree_lines:
+        for line_num, line in enumerate(tree_lines):
             line = line.rstrip() # Remove trailing whitespace
 
             if not line:
+                continue
+            
+            # Skip the very first line if it's just the project name with trailing slash
+            if line_num == 0 and (line.strip().endswith('/') or 
+                                 (line.strip().count('/') == 1 and not any(c in line for c in ['│', '├', '└']))):
+                # This is the project root line, we'll handle its children instead
                 continue
             
             # --- Robust Parsing: Find the Start of the Name ---
@@ -59,7 +65,7 @@ def parse_and_zip_project(
             name_start_index = 0
             for i, char in enumerate(line):
                 # Stop searching when we hit an alphanumeric character or a dot
-                if char.isalnum() or char in ['.', '/']:
+                if char.isalnum() or char in ['.', '/', '-', '_']:
                     break
                 name_start_index = i + 1
             
@@ -70,7 +76,13 @@ def parse_and_zip_project(
                 continue
 
             # --- Calculate Indent Level ---
-            indent_level = line[:name_start_index].count('│') + line[:name_start_index].count('└') + line[:name_start_index].count('├')
+            # Count tree characters before the name to determine hierarchy level
+            prefix_chars = line[:name_start_index]
+            indent_level = prefix_chars.count('│') + prefix_chars.count('└') + prefix_chars.count('├')
+            
+            # Adjust for root level items (they start at level 0)
+            if line_num == 0:
+                indent_level = 0
             
             # --- Determine Hierarchy ---
             
@@ -81,15 +93,22 @@ def parse_and_zip_project(
             # 2. Append the current clean name to the stack
             current_path_stack.append(clean_name)
             
-            # 3. Construct the full path
-            relative_path = "/".join(current_path_stack)
+            # 3. Construct the full path within the project
+            # All paths are relative to project root
+            if current_path_stack:
+                relative_path = "/".join(current_path_stack)
+            else:
+                relative_path = clean_name
 
-            # --- Improved Directory Detection ---
+            # Remove any trailing slashes for files
+            if '.' in clean_name.split('/')[-1]:  # It's a file (has extension)
+                relative_path = relative_path.rstrip('/')
             
-            # Detect directories based on common patterns and structure
+            # --- Directory Detection ---
             is_directory = (
                 clean_name.endswith('/') or
-                not '.' in clean_name.split('/')[-1] or
+                (not '.' in clean_name.split('/')[-1] and 
+                 not any(clean_name.endswith(ext) for ext in ['.md', '.json', '.yml', '.yaml', '.js', '.jsx', '.d.ts', '.dart', '.py'])) or
                 any(dir_indicator in clean_name.lower() for dir_indicator in 
                     ['src', 'dist', 'examples', 'test', 'docs', 'fixtures', 'workflows', 
                      'issue_template', '.github'])
@@ -104,14 +123,14 @@ def parse_and_zip_project(
                     zip_archive.writestr(dir_path, "")
                     created_dirs.add(dir_path)
                 
-                # Don't pop from stack - keep for child items
+                # Keep directory in stack for its children
                 
             else:
                 # File logic - generate appropriate content
                 content = generate_file_content(relative_path, clean_name)
                 zip_archive.writestr(relative_path, content.encode('utf-8'))
                 
-                # Pop the file name from the stack immediately after creation
+                # Pop the file name from the stack
                 current_path_stack.pop()
 
     # --- Finalize Buffer ---
@@ -127,26 +146,20 @@ def parse_and_zip_project(
                 break
             yield chunk
 
-    return zip_streamer(), root_dir_name
+    return zip_streamer(), project_name
 
-def extract_root_directory(first_line: str) -> str:
-    """Extract the root directory name from the first line of the tree structure."""
-    # Remove tree structure characters and strip
+def extract_project_name(first_line: str) -> str:
+    """Extract the project name from the first line of the tree structure."""
     clean_line = first_line.strip()
     
-    # Find the actual directory name (remove trailing slash if present)
-    if '/' in clean_line:
-        # Handle cases like "valley-prayer-times/"
-        root_name = clean_line.split('/')[0].strip()
-    else:
-        # Handle cases without trailing slash
-        root_name = clean_line.strip()
-    
-    # Clean up any remaining tree characters
+    # Remove tree structure characters
     for char in ['│', '├', '└', '──']:
-        root_name = root_name.replace(char, '').strip()
+        clean_line = clean_line.replace(char, '')
     
-    return root_name if root_name else "project"
+    # Extract the base name (before any slash)
+    project_name = clean_line.strip().split('/')[0].strip()
+    
+    return project_name if project_name else "project"
 
 def generate_file_content(relative_path: str, clean_name: str) -> str:
     """Generate appropriate placeholder content based on file type."""
@@ -194,7 +207,8 @@ void main() {{
 }}
 '''
     elif relative_path.endswith('.md'):
-        return f'''# {clean_name}
+        title = clean_name.replace('.md', '').replace('-', ' ').title()
+        return f'''# {title}
 
 This file was generated by ProjectZipper.
 
@@ -292,7 +306,7 @@ async def generate_zip_file(input_data: TreeInput):
     zip_buffer = io.BytesIO()
     
     try:
-        stream, root_dir_name = parse_and_zip_project(lines, zip_buffer)
+        stream, project_name = parse_and_zip_project(lines, zip_buffer)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during zip creation: {str(e)}")
 
@@ -301,7 +315,7 @@ async def generate_zip_file(input_data: TreeInput):
         stream,
         media_type="application/zip",
         headers={
-            "Content-Disposition": f"attachment; filename={root_dir_name}.zip",
+            "Content-Disposition": f"attachment; filename={project_name}.zip",
             "Content-Length": str(zip_buffer.getbuffer().nbytes) 
         }
     )
