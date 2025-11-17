@@ -1,23 +1,33 @@
-## ProjectZipper 🗂️⚡
+# ProjectZipper 🗂️⚡
 
-A FastAPI-based service that converts text-based file tree structures into downloadable ZIP archives. Perfect for quickly generating project skeletons, boilerplate code, or file structure templates.
+A **FastAPI-based service** that converts plain text-based file tree structures into instantly downloadable ZIP archives. It is perfect for quickly generating project skeletons, boilerplate code, or template file structures.
 
-https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi
-https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white
-https://img.shields.io/badge/ZIP-Archive-2D5B8A?style=for-the-badge
+\<div align="center"\>
+
+[](https://fastapi.tiangolo.com/)
+[](https://www.python.org/)
+[](https://en.wikipedia.org/wiki/Zip_\(file_format\))
+
+\</div\>
+
+-----
 
 ## ✨ Features
 
-· 🚀 Lightning Fast - Built with FastAPI for high performance
-· 📁 Smart Parsing - Understands various tree structure formats
-· 🎯 Auto Content - Generates appropriate placeholder content based on file types
-· 💾 Streaming Response - Efficient memory usage with streaming ZIP downloads
-· 🔧 Fully Typed - Type hints throughout for better development experience
-· 🐳 Docker Ready - Easy deployment with containerization
+  * **🚀 Lightning Fast** - Built with FastAPI for high-performance ZIP generation.
+  * **📁 Smart Parsing** - Understands and correctly interprets various textual file tree formats.
+  * **🎯 Auto Content** - Generates appropriate placeholder content based on recognized file extensions (e.g., Python comments, JavaScript console logs).
+  * **💾 Streaming Response** - Uses efficient memory usage by streaming the ZIP file for large archives.
+  * **🔧 Fully Typed** - Leverages Python type hints throughout for better code quality and developer experience.
+  * **🐳 Docker Ready** - Easy and consistent deployment using containerization.
+
+-----
 
 ## 🎮 Quick Start
 
-Installation
+### Installation
+
+Clone the repository and install the dependencies:
 
 ```bash
 # Clone the repository
@@ -28,12 +38,14 @@ cd projectzipper
 pip install -r requirements.txt
 ```
 
-Usage
+### Usage
+
+You can use the service by sending a `POST` request with the file structure text.
 
 ```python
 import requests
 
-# Example request
+# Example file structure input
 tree_structure = """
 project/
 ├── src/
@@ -53,18 +65,29 @@ response = requests.post(
     }
 )
 
-# Save the ZIP file
-with open("my_project.zip", "wb") as f:
-    f.write(response.content)
+# Save the downloaded ZIP file
+if response.status_code == 200:
+    with open("my_project.zip", "wb") as f:
+        f.write(response.content)
+    print("Successfully generated my_project.zip")
+else:
+    print(f"Error: {response.status_code}, {response.text}")
 ```
 
-🛠️ API Reference
+-----
 
-POST /generate-zip
+## 🛠️ API Reference
 
-Generates a ZIP file from a tree structure.
+### `POST /generate-zip`
 
-Request Body:
+Generates a ZIP file from the provided file tree structure.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `tree_structure` | `string` | The text representation of the file directory tree. |
+| `root_dir_name` | `string` | The name of the top-level directory inside the generated ZIP file. |
+
+**Request Body Example:**
 
 ```json
 {
@@ -73,136 +96,147 @@ Request Body:
 }
 ```
 
-Response: ZIP file stream
+**Response:** ZIP file stream (`application/zip`)
 
-📦 Supported File Types
+-----
 
-File Type Generated Content
-.py Python placeholder with comments
-.js JavaScript placeholder with console log
-.json Basic JSON structure
-.txt Simple text placeholder
-Others Basic file identifier
+## 📦 Supported File Types
 
-🚀 Deployment
+| File Type | Generated Content |
+| :--- | :--- |
+| **`.py`** | Python placeholder with comments (`# Your code here...`) |
+| **`.js`** | JavaScript placeholder with a console log (`console.log('// File:');`) |
+| **`.json`** | Basic JSON structure (`{}`) |
+| **`.txt`** | Simple text placeholder (`This is a placeholder file.`) |
+| **Others** | Basic file identifier |
 
-Local Development
+-----
+
+## 🚀 Deployment
+
+### Local Development
+
+Run the FastAPI application directly:
 
 ```bash
 python main.py
 ```
 
-Using Docker
+### Using Docker
+
+For containerized deployment:
 
 ```bash
 docker build -t projectzipper .
 docker run -p 8000:8000 projectzipper
 ```
 
-Production with Uvicorn
+### Production with Uvicorn
+
+Use Uvicorn with multiple worker processes for optimal performance:
 
 ```bash
 uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-🏗️ Project Structure
+-----
+
+## 🏗️ Project Structure
 
 ```
 projectzipper/
-├── main.py              # FastAPI application
-├── requirements.txt     # Dependencies
-├── Dockerfile          # Container configuration
-├── README.md           # Project documentation
-└── examples/           # Usage examples
+├── main.py              # Core FastAPI application
+├── requirements.txt     # Python dependencies
+├── Dockerfile           # Docker container configuration
+└── examples/            # Usage examples
     ├── basic_usage.py
     └── advanced_usage.py
 ```
 
-🤝 Contributing
+-----
 
-We love your input! We want to make contributing to ProjectZipper as easy and transparent as possible.
+## 🤝 Contributing
 
-Development Setup
+We welcome your input\! We aim to make contributing to ProjectZipper as easy and transparent as possible.
 
-1. Fork the repo
-2. Create your feature branch (git checkout -b feature/amazing-feature)
-3. Commit your changes (git commit -m 'Add some amazing feature')
-4. Push to the branch (git push origin feature/amazing-feature)
-5. Open a Pull Request
+### Development Setup
 
-Reporting Issues
+1.  Fork the repository.
+2.  Create your feature branch: `git checkout -b feature/amazing-feature`
+3.  Commit your changes: `git commit -m 'feat: Add amazing feature'`
+4.  Push to the branch: `git push origin feature/amazing-feature`
+5.  Open a **Pull Request**.
 
-Please use the issue tracker to report any bugs or suggest features.
+### Reporting Issues
 
-📄 License
+Please use the [GitHub issue tracker](https://www.google.com/search?q=https://github.com/umarbutt/projectzipper/issues) to report any bugs or suggest new features.
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+-----
 
-👨‍💻 Author
+## 📄 License
 
-Mohd Umar Butt (Umar Butt)
+This project is licensed under the **MIT License** - see the `LICENSE` file for details.
 
-· 💼 Portfolio
-· 🐦 Twitter
-· 💻 GitHub
-· 📝 Blog
-· 🔗 LinkedIn
+-----
 
-🌟 Support
+## 👨‍💻 Author
+
+**Mohd Umar Butt (Umar Butt)**
+
+| Link | Handle |
+|:---:|:---:|
+| 💻 [GitHub](https://github.com/mohdumarbutt) | 🔗 [LinkedIn](https://www.linkedin.com/in/mohdumarbutt) |
+| 🐦 [Twitter](https://www.google.com/search?q=https://twitter.com/umarbutt) | 💼 [Portfolio / Blog](https://umarbutt.com) |
+
+-----
+
+## 🌟 Support
 
 If you find this project helpful, please consider supporting its development:
 
-☕ Buy Me a Coffee
-
-https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black
+[](https://buymeacoffee.com/umarbutt)
 
 Your support helps me continue maintaining and improving this project and creating more open-source tools for the community.
 
-📊 GitHub Stats
+-----
 
-https://github-readme-stats.vercel.app/api?username=umarbutt&show_icons=true&theme=radical
+## 📊 Project Metrics
 
-https://visitor-badge.laobi.icu/badge?page_id=umarbutt.projectzipper
+\<div align="center"\>
 
-🛡️ Security
+| GitHub Stats | Visitor Count |
+| :---: | :---: |
+| [](https://www.google.com/search?q=https://github.com/umarbutt) |  |
 
-If you discover any security-related issues, please email security@umarbutt.com instead of using the issue tracker.
+\</div\>
 
-🙏 Acknowledgments
+-----
 
-· FastAPI team for the amazing web framework
-· Pydantic for data validation
-· Uvicorn for ASGI server implementation
-· All contributors and users of this project
+## 🛡️ Security
 
----
+If you discover any security-related issues, please email **security@umarbutt.com** instead of using the public issue tracker.
 
-<div align="center">
+-----
 
-⭐ Don't forget to star this repo if you find it useful! ⭐
+## 🙏 Acknowledgments
+
+  * The **FastAPI** team for the amazing web framework.
+  * **Pydantic** for robust data validation.
+  * **Uvicorn** for the high-performance ASGI server implementation.
+  * All contributors and users of this project\!
+
+-----
+
+\<div align="center"\>
+
+## ⭐ Don't forget to star this repo if you find it useful\! ⭐
 
 Made with ❤️ by Umar Butt
 
-https://img.shields.io/badge/GitHub-ProjectZipper-181717?style=for-the-badge&logo=github
-https://img.shields.io/twitter/follow/umarbutt?style=social
+<br>
 
-</div>
+| Follow Me | Project Badge |
+| :---: | :---: |
+| [](https://www.google.com/search?q=https://twitter.com/umarbutt) | [](https://www.google.com/search?q=https://github.com/umarbutt/projectzipper) |
 
-📞 Connect With Me
-
-<p align="center">
-  <a href="https://buymeacoffee.com/umarbutt">
-    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy Me A Coffee">
-  </a>
-  <a href="https://github.com/mohdumarbutt">
-    <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" height="50">
-  </a>
-  <a href="https://www.linkedin.com/in/mohdumarbutt">
-    <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" height="50">
-  </a>
-  <a href="https://twitter.com/">
-    <img src="https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white" height="50">
-  </a>
-</p>
-
----
+\</div\>
