@@ -148,6 +148,24 @@ We welcome contributions! Please follow these steps:
 4. **Push** to branch: `git push origin feature/amazing-feature`
 5. **Open** a Pull Request
 
+## 📈 GitHub Profile Analysis
+
+<div align="center">
+
+[![GitHub Profile Summary](https://img.shields.io/badge/Detailed_GitHub_Analysis-View_Here-228B22?style=for-the-badge&logo=github&logoColor=white)](https://profile-summary-for-github.com/user/mohdumarbutt)
+
+*Click the badge above for a detailed analysis of my GitHub activity, coding patterns, and contribution insights*
+
+<br>
+
+### 🎯 Quick Stats from Profile Analysis
+- **Most Used Languages:** Python, JavaScript, HTML/CSS
+- **Active Contribution Periods:** Regular commits throughout the year
+- **Repository Distribution:** Full-stack projects, AI tools, and open-source contributions
+- **Code Quality:** Well-documented with consistent commit patterns
+
+</div>
+
 ### Reporting Issues
 Use the [GitHub Issues](https://github.com/mohdumarbutt/Project-Zipper/issues) to report bugs or request features.
 
