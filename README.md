@@ -9,7 +9,7 @@
 
 **A high-performance FastAPI service that converts text-based file trees into downloadable ZIP archives**
 
-[![GitHub Issues](https://img.shields.io/github/issues/mohdumarbutt/projectzipper)](https://github.com/mohdumarbutt/projectzipper/issues)
+[![GitHub Issues](https://img.shields.io/github/issues/mohdumarbutt/Project-Zipper)](https://github.com/mohdumarbutt/Project-Zipper/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 
@@ -30,7 +30,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/mohdumarbutt/projectzipper.git
+git clone https://github.com/mohdumarbutt/Project-Zipper.git
 cd projectzipper
 
 # Install dependencies
@@ -149,7 +149,7 @@ We welcome contributions! Please follow these steps:
 5. **Open** a Pull Request
 
 ### Reporting Issues
-Use the [GitHub Issues](https://github.com/mohdumarbutt/projectzipper/issues) to report bugs or request features.
+Use the [GitHub Issues](https://github.com/mohdumarbutt/Project-Zipper/issues) to report bugs or request features.
 
 ## 📄 License
 
