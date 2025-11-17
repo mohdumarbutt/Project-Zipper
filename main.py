@@ -17,7 +17,7 @@ app = FastAPI(
     description="Generate a downloadable ZIP file from a text-based file tree structure."
 )
 
-# --- 2. Root Endpoint (Added to pass Render Health Check) ---
+# --- 2. Root Endpoint (For Health Check and Info) ---
 @app.get("/", tags=["Info"])
 def read_root():
     return {
@@ -35,85 +35,86 @@ def parse_and_zip_project(
 ) -> Iterator[bytes]:
     """
     Parses tree lines, creates a zip archive in the in-memory buffer, 
-    and returns a generator to stream the data.
+    and returns a generator to stream the data. This version uses robust 
+    parsing to strip structural characters (│, ├──, etc.).
     """
     
     # --- Step 3b & 3c (Setup Archive) ---
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_archive:
         
-        # A simple stack to keep track of current directories (context for nested files)
+        # Stack to manage directory hierarchy
         current_path_stack = []
         
-        # Determine the base path for zipping (e.g., 'project/')
+        # Base path for zipping (e.g., 'valley-prayer-times/')
         base_path = f"{root_name}" 
         
         # Add the root folder itself to the ZIP
         zip_archive.writestr(f"{base_path}/", "")
 
         for line in tree_lines:
-            line = line.strip()
+            line = line.rstrip() # Remove trailing whitespace
+
             if not line:
                 continue
-
-            # --- Step 3c (Parsing: Identify Indentation and Name) ---
             
-            # Count leading non-alphanumeric characters (indicators of indentation)
-            # This is a robust way to handle tree lines like "├── file" or "│   file"
-            indent_level = len(line) - len(line.lstrip('|- '))
+            # --- 3c (Robust Parsing: Find the Start of the Name) ---
             
-            # The clean name is the text after the indentation indicators
-            clean_name = line.lstrip('|- ').lstrip('└──').lstrip('├──').strip()
+            # Find the position where the actual file/folder name starts 
+            # by looking for the first alphanumeric character or dot.
+            name_start_index = 0
+            for i, char in enumerate(line):
+                # Stop searching when we hit an alphanumeric character or a dot (start of filename)
+                if char.isalnum() or char in ['.', '/']:
+                    break
+                name_start_index = i + 1
+            
+            # The clean name is the remainder of the line, stripped of any leading/trailing space.
+            clean_name = line[name_start_index:].strip()
             
             if not clean_name:
                 continue
 
-            # --- Step 3c (Determine Hierarchy) ---
+            # --- Calculate Indent Level ---
+            # Calculate the indent level based on the number of structural symbols present 
+            # before the name. This helps manage the stack.
+            indent_level = line[:name_start_index].count('│') + line[:name_start_index].count('└') + line[:name_start_index].count('├')
+            
+            # --- Determine Hierarchy ---
             
             # 1. Update the path stack based on indentation
-            # Pop elements from the stack if indentation decreases
             while len(current_path_stack) > indent_level:
                 current_path_stack.pop()
             
-            # 2. Add the current name to the stack
+            # 2. Append the current clean name to the stack
             current_path_stack.append(clean_name)
             
-            # 3. Construct the final relative path within the ZIP (e.g., 'src/main.js')
+            # 3. Construct the full path
             relative_path = "/".join(current_path_stack)
-            
-            # 4. Construct the full ZIP path (e.g., 'project/src/main.js')
             full_zip_path = f"{base_path}/{relative_path}"
 
-
+            # --- 3c (Write to Archive) ---
+            
+            # Heuristic: If path ends with / or has no period/extension, treat as directory
             if full_zip_path.endswith('/') or not '.' in full_zip_path.split('/')[-1]:
-                # Treat as a directory if ends with / or has no file extension heuristic
+                
+                # Directory logic:
                 dir_path = full_zip_path.rstrip('/') + "/"
-                zip_archive.writestr(dir_path, "") # Write empty string for a directory entry
+                zip_archive.writestr(dir_path, "")
                 
-                # Crucial: If it was identified as a directory, remove the last element from stack 
-                # (the directory name itself) because we are relying on the indentation level 
-                # to manage the hierarchy, and the next line will be a child of this directory.
-                # If we leave it, the path will be duplicated (e.g., 'src/src/file').
-                # We handle the hierarchy via `current_path_stack` length, not the explicit path strings.
-                
-                # The simple path parsing provided above is sufficient for your basic example:
-                # project/
-                # ├── src/
-                # ...
-                
-                # However, for robustness, if the name ends with '/', remove it from the stack 
-                # to prevent path duplication when the children are processed.
-                if current_path_stack and current_path_stack[-1].endswith('/'):
-                    current_path_stack[-1] = current_path_stack[-1].rstrip('/') # Clean up the stack entry
+                # The directory name stays on the stack until the next line decreases indentation.
+                # However, if the current item is definitively a directory (e.g., 'src/'), 
+                # we pop it off to prevent duplication in the next step's relative_path calculation.
+                current_path_stack.pop()
                 
             else:
-                # --- Step 3c (File Content Generation) ---
+                # File logic:
                 
-                # Generate simple placeholder content based on the extension
-                if full_zip_path.endswith('.js'):
+                # Generate simple placeholder content (slightly expanded)
+                if full_zip_path.endswith(('.js', '.jsx', '.d.ts')):
                     content = f'// File: {relative_path}\nconsole.log("Project Zipper generated this file.");'
-                elif full_zip_path.endswith(('.py', '.txt')):
+                elif full_zip_path.endswith(('.py', '.dart', '.md')):
                     content = f'# File: {relative_path}\n# This content is a placeholder.'
-                elif full_zip_path.endswith(('.json')):
+                elif full_zip_path.endswith(('.json', '.yml')):
                     content = '{\n  "generated_by": "ProjectZipper"\n}'
                 else:
                     content = f'File: {relative_path} content.'
@@ -123,10 +124,10 @@ def parse_and_zip_project(
                 # Pop the file name from the stack immediately after creation
                 current_path_stack.pop()
 
-    # --- Step 3d (Finalize Buffer) ---
+    # --- 3d (Finalize Buffer) ---
     zip_buffer.seek(0) # Rewind the buffer to the beginning
 
-    # --- Step 4 (Create Stream Generator) ---
+    # --- 4 (Create Stream Generator) ---
     def zip_streamer() -> Iterator[bytes]:
         """Reads the in-memory buffer in chunks for streaming."""
         chunk_size = 8192  # 8KB
@@ -149,31 +150,25 @@ async def generate_zip_file(input_data: TreeInput):
     and returns it as a downloadable response.
     """
     
-    # Pre-process the input lines
     lines = input_data.tree_structure.strip().split('\n')
     
     if not lines or not input_data.tree_structure.strip():
         raise HTTPException(status_code=400, detail="Input tree structure cannot be empty.")
 
-    # --- Step 3a (Initialize Buffer) ---
+    # --- 3a (Initialize Buffer) ---
     zip_buffer = io.BytesIO()
     
-    # Perform the parsing and zipping
     try:
-        # --- Call Core Logic ---
         stream = parse_and_zip_project(lines, input_data.root_dir_name, zip_buffer)
     except Exception as e:
-        # Catch any unexpected errors during zipping
         raise HTTPException(status_code=500, detail=f"Error during zip creation: {str(e)}")
 
-    # --- Step 4 (Construct Streaming Response) ---
+    # --- 4 (Construct Streaming Response) ---
     response = StreamingResponse(
         stream,
         media_type="application/zip",
         headers={
-            # Forces download and sets the filename
             "Content-Disposition": f"attachment; filename={input_data.root_dir_name}.zip",
-            # Provides the client with the final file size for progress bar display
             "Content-Length": str(zip_buffer.getbuffer().nbytes) 
         }
     )
@@ -182,5 +177,4 @@ async def generate_zip_file(input_data: TreeInput):
 # --- 5. Local Development Run Command ---
 if __name__ == "__main__":
     import uvicorn
-    # Host 0.0.0.0 is needed for Pydroid/Android access
     uvicorn.run(app, host="0.0.0.0", port=8000)
