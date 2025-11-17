@@ -1,4 +1,4 @@
-
+```markdown
 # ProjectZipper 🗂️⚡
 
 <div align="center">
@@ -9,7 +9,7 @@
 
 **A high-performance FastAPI service that converts text-based file trees into downloadable ZIP archives**
 
-[![GitHub Issues](https://img.shields.io/github/issues/umarbutt/projectzipper)](https://github.com/umarbutt/projectzipper/issues)
+[![GitHub Issues](https://img.shields.io/github/issues/mohdumarbutt/projectzipper)](https://github.com/mohdumarbutt/projectzipper/issues)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 
@@ -30,7 +30,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/umarbutt/projectzipper.git
+git clone https://github.com/mohdumarbutt/projectzipper.git
 cd projectzipper
 
 # Install dependencies
@@ -149,7 +149,7 @@ We welcome contributions! Please follow these steps:
 5. **Open** a Pull Request
 
 ### Reporting Issues
-Use the [GitHub Issues](https://github.com/umarbutt/projectzipper/issues) to report bugs or request features.
+Use the [GitHub Issues](https://github.com/mohdumarbutt/projectzipper/issues) to report bugs or request features.
 
 ## 📄 License
 
@@ -173,7 +173,7 @@ If this project helps you, consider supporting its development:
 
 <div align="center">
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/umarbutt)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/mohdumarbutt)
 
 </div>
 
@@ -201,6 +201,3 @@ For security-related issues, please email **Mohdumar2724@gmail.com** instead of 
 [![Follow on GitHub](https://img.shields.io/github/followers/mohdumarbutt?style=social)](https://github.com/mohdumarbutt)
 
 </div>
-```
-
-**Copy and paste this entire text into your README.md file** - it's ready to use with proper formatting, correct links, and professional structure.
