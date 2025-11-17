@@ -128,3 +128,14 @@ if __name__ == "__main__":
     import uvicorn
     # Use 0.0.0.0 for Pydroid/Android to ensure it's accessible externally (e.g., from a browser)
     uvicorn.run(app, host="0.0.0.0", port=8000)
+    
+    # Add this endpoint to main.py
+@app.get("/", tags=["Info"])
+def read_root():
+    return {
+        "service": "ProjectZipper API", 
+        "status": "Online", 
+        "version": "1.0",
+        "documentation": "/docs"
+    }
+
