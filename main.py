@@ -10,7 +10,6 @@ from pydantic import BaseModel
 class TreeInput(BaseModel):
     """Defines the structure of the JSON input for the API."""
     tree_structure: str
-    root_dir_name: str = "project" # Used only for ZIP filename
 
 app = FastAPI(
     title="ProjectZipper",
@@ -34,8 +33,7 @@ def parse_and_zip_project(
 ) -> Iterator[bytes]:
     """
     Parses tree lines, creates a zip archive in the in-memory buffer, 
-    and returns a generator to stream the data. This version creates
-    the exact structure without an extra root directory.
+    and returns a generator to stream the data.
     """
     
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_archive:
@@ -45,6 +43,9 @@ def parse_and_zip_project(
         
         # Track created directories to avoid duplicates
         created_dirs = set()
+        
+        # Extract root directory name from first line
+        root_dir_name = extract_root_directory(tree_lines[0]) if tree_lines else "project"
 
         for line in tree_lines:
             line = line.rstrip() # Remove trailing whitespace
@@ -80,7 +81,7 @@ def parse_and_zip_project(
             # 2. Append the current clean name to the stack
             current_path_stack.append(clean_name)
             
-            # 3. Construct the full path (no extra root directory)
+            # 3. Construct the full path
             relative_path = "/".join(current_path_stack)
 
             # --- Improved Directory Detection ---
@@ -91,7 +92,7 @@ def parse_and_zip_project(
                 not '.' in clean_name.split('/')[-1] or
                 any(dir_indicator in clean_name.lower() for dir_indicator in 
                     ['src', 'dist', 'examples', 'test', 'docs', 'fixtures', 'workflows', 
-                     'issue_template', '.github', 'valley-prayer-times', 'project-01'])
+                     'issue_template', '.github'])
             )
             
             if is_directory:
@@ -126,7 +127,26 @@ def parse_and_zip_project(
                 break
             yield chunk
 
-    return zip_streamer()
+    return zip_streamer(), root_dir_name
+
+def extract_root_directory(first_line: str) -> str:
+    """Extract the root directory name from the first line of the tree structure."""
+    # Remove tree structure characters and strip
+    clean_line = first_line.strip()
+    
+    # Find the actual directory name (remove trailing slash if present)
+    if '/' in clean_line:
+        # Handle cases like "valley-prayer-times/"
+        root_name = clean_line.split('/')[0].strip()
+    else:
+        # Handle cases without trailing slash
+        root_name = clean_line.strip()
+    
+    # Clean up any remaining tree characters
+    for char in ['│', '├', '└', '──']:
+        root_name = root_name.replace(char, '').strip()
+    
+    return root_name if root_name else "project"
 
 def generate_file_content(relative_path: str, clean_name: str) -> str:
     """Generate appropriate placeholder content based on file type."""
@@ -272,7 +292,7 @@ async def generate_zip_file(input_data: TreeInput):
     zip_buffer = io.BytesIO()
     
     try:
-        stream = parse_and_zip_project(lines, zip_buffer)
+        stream, root_dir_name = parse_and_zip_project(lines, zip_buffer)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error during zip creation: {str(e)}")
 
@@ -281,7 +301,7 @@ async def generate_zip_file(input_data: TreeInput):
         stream,
         media_type="application/zip",
         headers={
-            "Content-Disposition": f"attachment; filename={input_data.root_dir_name}.zip",
+            "Content-Disposition": f"attachment; filename={root_dir_name}.zip",
             "Content-Length": str(zip_buffer.getbuffer().nbytes) 
         }
     )
