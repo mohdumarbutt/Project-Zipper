@@ -4,6 +4,7 @@ import re
 from typing import Iterator, Tuple, List
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 class TreeInput(BaseModel):
@@ -13,6 +14,19 @@ class TreeInput(BaseModel):
 app = FastAPI(
     title="ProjectZipper",
     description="Generate a downloadable ZIP file from a text-based file tree structure."
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://project-zipper.vercel.app",
+        "http://localhost:3000",  # For local development
+        "http://localhost:5173",  # For Vite dev server
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 @app.get("/", tags=["Info"])
