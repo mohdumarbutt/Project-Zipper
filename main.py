@@ -1,6 +1,5 @@
 import io
 import zipfile
-import re
 from typing import Iterator, Tuple, List
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -23,11 +22,18 @@ def read_root():
         "documentation": "/docs"
     }
 
-def parse_tree_structure(tree_lines: List[str]) -> List[Tuple[str, int, bool]]:
+def parse_tree_structure(tree_lines: List[str]) -> Tuple[str, List[Tuple[str, int, bool]]]:
     """
-    Parse tree structure lines into (path, depth, is_directory) tuples.
-    This handles the tree characters and calculates proper depth.
+    Parse tree structure and extract root directory name and hierarchy.
+    Returns (root_name, items) where items are (name, depth, is_directory)
     """
+    if not tree_lines:
+        return "project", []
+    
+    # Extract root directory from first line
+    first_line = tree_lines[0].strip()
+    root_name = extract_root_name(first_line)
+    
     parsed_items = []
     
     for line in tree_lines:
@@ -35,76 +41,111 @@ def parse_tree_structure(tree_lines: List[str]) -> List[Tuple[str, int, bool]]:
         if not line:
             continue
             
-        # Count the depth based on tree characters
-        # Each '├──', '└──', or '│' increases depth, but we need to be careful
-        depth = 0
-        i = 0
-        while i < len(line):
-            if line[i] in [' ', '\t']:
-                i += 1
-                continue
-            if line.startswith('├──', i) or line.startswith('└──', i):
-                depth += 1
-                i += 3
-            elif line[i] == '│':
-                depth += 1
-                i += 1
-            else:
-                break
+        # Calculate depth based on tree characters
+        depth = calculate_depth(line)
         
-        # Extract the actual file/directory name
-        # Find where the actual name starts (after tree characters)
-        name_start = 0
-        for i, char in enumerate(line):
-            if char not in [' ', '│', '├', '└', '─', '\t']:
-                name_start = i
-                break
-        
-        clean_name = line[name_start:].strip()
+        # Extract clean name
+        clean_name = extract_clean_name(line)
         if not clean_name:
             continue
             
+        # Skip the root directory line itself (depth 0) as we'll handle it separately
+        if depth == 0 and clean_name == root_name:
+            continue
+            
         # Determine if it's a directory
-        is_directory = (
-            clean_name.endswith('/') or 
-            not '.' in clean_name.split('/')[-1] or
-            any(clean_name == dir_name for dir_name in [
-                'src', 'dist', 'examples', 'test', 'docs', 'fixtures', 
-                'workflows', 'ISSUE_TEMPLATE', '.github'
-            ]) or
-            any(clean_name.startswith(dir_name) for dir_name in [
-                'src/', 'dist/', 'examples/', 'test/', 'docs/', '.github/'
-            ])
-        )
+        is_directory = is_item_directory(clean_name)
         
         parsed_items.append((clean_name, depth, is_directory))
     
-    return parsed_items
+    return root_name, parsed_items
 
-def build_file_hierarchy(parsed_items: List[Tuple[str, int, bool]]) -> List[Tuple[str, bool]]:
-    """
-    Build the complete file hierarchy from parsed items.
-    Returns list of (full_path, is_directory) tuples.
-    """
+def extract_root_name(first_line: str) -> str:
+    """Extract root directory name from first line."""
+    # Remove tree structure characters
+    clean_line = first_line.strip()
+    for char in ['│', '├', '└', '──', ' ']:
+        clean_line = clean_line.replace(char, '')
+    
+    # Remove trailing slash if present
+    if clean_line.endswith('/'):
+        clean_line = clean_line[:-1]
+    
+    return clean_line if clean_line else "project"
+
+def calculate_depth(line: str) -> int:
+    """Calculate depth based on tree structure characters."""
+    depth = 0
+    i = 0
+    while i < len(line):
+        if line[i] in [' ', '\t']:
+            i += 1
+            continue
+        if line.startswith('├──', i) or line.startswith('└──', i):
+            depth += 1
+            i += 3
+        elif line[i] == '│':
+            # │ indicates same level, don't increase depth
+            i += 1
+        else:
+            break
+    return depth
+
+def extract_clean_name(line: str) -> str:
+    """Extract clean file/directory name from line."""
+    # Find where the actual name starts
+    name_start = 0
+    for i, char in enumerate(line):
+        if char not in [' ', '│', '├', '└', '─', '\t']:
+            name_start = i
+            break
+    
+    clean_name = line[name_start:].strip()
+    return clean_name
+
+def is_item_directory(name: str) -> bool:
+    """Determine if an item is a directory."""
+    # Common directory indicators
+    directory_names = {
+        'src', 'dist', 'examples', 'test', 'docs', 'fixtures', 
+        'workflows', 'ISSUE_TEMPLATE', '.github'
+    }
+    
+    if name.endswith('/'):
+        return True
+    
+    if name in directory_names:
+        return True
+        
+    # If it contains no dot or is a known directory pattern
+    if '.' not in name.split('/')[-1]:
+        return True
+        
+    return False
+
+def build_hierarchy(root_name: str, parsed_items: List[Tuple[str, int, bool]]) -> List[Tuple[str, bool]]:
+    """Build complete file hierarchy from parsed items."""
     hierarchy = []
     stack = []
+    
+    # Start with root directory
+    hierarchy.append((f"{root_name}/", True))
     
     for name, depth, is_directory in parsed_items:
         # Adjust stack based on current depth
         while len(stack) > depth:
             stack.pop()
         
-        # Build the full path
+        # Build full path
         if stack:
             parent_path = stack[-1][0]
-            full_path = f"{parent_path}/{name}" if parent_path else name
+            full_path = f"{parent_path}/{name}"
         else:
-            full_path = name
+            full_path = f"{root_name}/{name}"
         
-        # Add to hierarchy
         hierarchy.append((full_path, is_directory))
         
-        # If it's a directory, push to stack for children
+        # If it's a directory, push to stack
         if is_directory:
             stack.append((full_path, depth))
     
@@ -117,20 +158,9 @@ def parse_and_zip_project(
     """
     Main function to parse tree structure and create ZIP archive.
     """
-    # Extract project name from first line
-    project_name = "project"
-    for line in tree_lines:
-        line = line.strip()
-        if line and not any(c in line for c in ['│', '├', '└', '─']):
-            if '/' in line:
-                project_name = line.split('/')[0].strip()
-            else:
-                project_name = line.strip()
-            break
-    
-    # Parse the tree structure
-    parsed_items = parse_tree_structure(tree_lines)
-    hierarchy = build_file_hierarchy(parsed_items)
+    # Parse tree structure
+    root_name, parsed_items = parse_tree_structure(tree_lines)
+    hierarchy = build_hierarchy(root_name, parsed_items)
     
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_archive:
         created_dirs = set()
@@ -157,29 +187,29 @@ def parse_and_zip_project(
                 break
             yield chunk
 
-    return zip_streamer(), project_name
+    return zip_streamer(), root_name
 
 def generate_file_content(file_path: str) -> str:
     """
     Generate appropriate content based on file type and path.
-    This is a general-purpose content generator.
     """
     filename = file_path.split('/')[-1]
     
     # Common configuration files
     if filename == 'package.json':
-        return '''{
-  "name": "project",
+        project_name = file_path.split('/')[0] if '/' in file_path else 'project'
+        return f'''{{
+  "name": "{project_name}",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
+  "scripts": {{
     "test": "echo \\"Error: no test specified\\" && exit 1"
-  },
+  }},
   "keywords": [],
   "author": "",
   "license": "ISC"
-}'''
+}}'''
     
     elif filename == '.gitignore':
         return '''node_modules/
@@ -222,7 +252,8 @@ examples/
     
     # Documentation files
     elif filename == 'README.md':
-        return f'''# {file_path.split('/')[0] if '/' in file_path else 'Project'}
+        project_name = file_path.split('/')[0] if '/' in file_path else 'Project'
+        return f'''# {project_name}
 
 Project description goes here.
 
@@ -254,10 +285,6 @@ Project documentation goes here.
 - Feature 1
 - Feature 2
 - Feature 3
-
-## API Reference
-
-Coming soon...
 '''
     
     elif filename == 'CHANGELOG.md':
@@ -356,7 +383,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.'''
     
     # GitHub specific files
-    elif filename == 'ci.yml':
+    elif 'workflows' in file_path and filename == 'ci.yml':
         return '''name: CI
 
 on: [push, pull_request]
@@ -370,7 +397,7 @@ jobs:
         run: npm test
 '''
     
-    elif filename == 'bug_report.md':
+    elif 'ISSUE_TEMPLATE' in file_path and filename == 'bug_report.md':
         return '''---
 name: Bug report
 about: Create a report to help us improve
@@ -389,12 +416,9 @@ Steps to reproduce the behavior:
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
-
-## Expected behavior
-A clear and concise description of what you expected to happen.
 '''
     
-    elif filename == 'feature_request.md':
+    elif 'ISSUE_TEMPLATE' in file_path and filename == 'feature_request.md':
         return '''---
 name: Feature request
 about: Suggest an idea for this project
@@ -422,12 +446,6 @@ Please include a summary of the changes and which issue is fixed.
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
-
-## Checklist
-
-- [ ] My code follows the style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have added tests that prove my fix is effective
 '''
     
     # Code files
@@ -440,17 +458,18 @@ module.exports = {{}};
 '''
     
     elif file_path.endswith('.jsx'):
+        component_name = filename.replace('.jsx', '').title()
         return f'''import React from 'react';
 
-const {filename.replace('.jsx', '').title()} = () => {{
+const {component_name} = () => {{
   return (
     <div>
-      <h1>{filename.replace('.jsx', '')}</h1>
+      <h1>{component_name}</h1>
     </div>
   );
 }};
 
-export default {filename.replace('.jsx', '').title()};
+export default {component_name};
 '''
     
     elif file_path.endswith('.d.ts'):
@@ -492,7 +511,7 @@ name: "Example"
 version: "1.0.0"
 '''
     
-    # Default content for any other file type
+    # Default content
     else:
         return f'# {filename}\n\nThis file was generated by ProjectZipper.\n\nFile path: {file_path}\n'
 
