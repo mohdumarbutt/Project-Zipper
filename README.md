@@ -1,5 +1,5 @@
 
-# ProjectZipper 🗂️⚡
+# UB Project Zipper 🗂️⚡
 
 <div align="center">
 
@@ -31,7 +31,7 @@
 ```bash
 # Clone the repository
 git clone https://github.com/mohdumarbutt/Project-Zipper.git
-cd projectzipper
+cd UB Project Zipper
 
 # Install dependencies
 pip install -r requirements.txt
@@ -116,8 +116,8 @@ python main.py
 
 ### Docker Deployment
 ```bash
-docker build -t projectzipper .
-docker run -p 8000:8000 projectzipper
+docker build -t UB Project Zipper .
+docker run -p 8000:8000 UB Project Zipper
 ```
 
 ### Production with Uvicorn
@@ -128,7 +128,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 ## 🏗️ Project Structure
 
 ```
-projectzipper/
+UB Project Zipper/
 ├── main.py                 # FastAPI application entry point
 ├── requirements.txt        # Python dependencies
 ├── Dockerfile             # Container configuration
